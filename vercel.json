@@ -18,6 +18,5 @@
     "NODE_ENV": "production",
     "NEXTAUTH_URL": "@nextauth_url",
     "NEXTAUTH_SECRET": "@nextauth_secret"
-  },
-  "regions": ["all"]
+  }
 } 
