@@ -14,7 +14,7 @@ const nextConfig = {
     ignoreBuildErrors: false,
   },
   images: {
-    domains: ['localhost'],
+    domains: ['localhost', 'ym-pay.vercel.app'],
     formats: ['image/avif', 'image/webp'],
   },
   experimental: {

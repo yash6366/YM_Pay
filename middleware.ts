@@ -52,7 +52,7 @@ export async function middleware(request: NextRequest) {
 
   // Add CORS headers
   const response = NextResponse.next()
-  response.headers.set('Access-Control-Allow-Origin', process.env.NODE_ENV === 'production' ? 'https://yourdomain.com' : '*')
+  response.headers.set('Access-Control-Allow-Origin', process.env.NODE_ENV === 'production' ? 'https://ym-pay.vercel.app' : '*')
   response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
   response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization')
   response.headers.set('Access-Control-Max-Age', '86400')
