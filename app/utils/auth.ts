@@ -1,4 +1,4 @@
-import { jwtVerify } from 'jsonwebtoken'
+import { jwtVerify } from 'jose';
 import { cookies } from 'next/headers'
 import { AppError } from './error'
 

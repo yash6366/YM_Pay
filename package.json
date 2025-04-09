@@ -50,6 +50,7 @@
     "embla-carousel-react": "^8.0.0",
     "framer-motion": "^11.0.5",
     "input-otp": "^1.1.0",
+    "jose": "^6.0.10",
     "jsonwebtoken": "^9.0.2",
     "lucide-react": "^0.330.0",
     "mongodb": "^6.3.0",
