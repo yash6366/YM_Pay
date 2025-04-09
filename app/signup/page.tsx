@@ -32,8 +32,29 @@ export default function SignupPage() {
     })
   }
 
+  const validatePassword = (password: string): boolean => {
+    const hasMinLength = password.length >= 8;
+    const hasUppercase = /[A-Z]/.test(password);
+    const hasLowercase = /[a-z]/.test(password);
+    const hasNumber = /[0-9]/.test(password);
+    const hasSpecialChar = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password);
+    
+    return hasMinLength && hasUppercase && hasLowercase && hasNumber && hasSpecialChar;
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    // Validate password
+    if (!validatePassword(formData.password)) {
+      toast({
+        variant: "destructive",
+        title: "Invalid Password",
+        description: "Your password doesn't meet the requirements. Please check the guidelines below the password field."
+      });
+      return;
+    }
+    
     setLoading(true)
 
     try {
@@ -192,7 +213,18 @@ export default function SignupPage() {
                       value={formData.password}
                       onChange={handleChange}
                       required
+                      minLength={8}
                     />
+                  </div>
+                  <div className="mt-2">
+                    <p className="text-xs text-gray-500 font-medium">Password must:</p>
+                    <ul className="text-xs text-gray-500 list-disc pl-4 space-y-1 mt-1">
+                      <li>Be at least 8 characters long</li>
+                      <li>Include at least one uppercase letter (A-Z)</li>
+                      <li>Include at least one lowercase letter (a-z)</li>
+                      <li>Include at least one number (0-9)</li>
+                      <li>Include at least one special character (@, #, $, etc.)</li>
+                    </ul>
                   </div>
                 </div>
               </CardContent>

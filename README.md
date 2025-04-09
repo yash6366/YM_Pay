@@ -1,156 +1,154 @@
 # YM-Pay
 
+<p align="center">
+  <img src="/public/images/YM-Pay-logo.jpg" alt="YM-Pay Logo" width="150" />
+</p>
+
 ## Project Overview
-YM-Pay is a modern payment processing system built with Next.js, TypeScript, and MongoDB. It provides a secure and efficient platform for handling financial transactions with a beautiful, responsive user interface.
+YM-Pay is a modern digital wallet and payment application built with Next.js, TypeScript, and MongoDB. It enables users to send money, make bill payments, perform mobile recharges, and manage their financial transactions through a secure and intuitive interface.
+
+## Live Demo
+Visit the live demo at [https://ym-pay.vercel.app/](https://ym-pay.vercel.app/)
 
 ## Features
-- Modern, responsive UI built with Next.js and Tailwind CSS
-- Secure authentication system with JWT
-- Dashboard for transaction management
-- Real-time transaction processing
-- Form validation with React Hook Form and Zod
-- Dark/Light mode support
-- Comprehensive UI components using Radix UI
-- MongoDB database integration
+- **User Authentication**: Secure signup and login with JWT authentication
+- **Dashboard**: Comprehensive dashboard showing balance and quick actions
+- **Send Money**: Transfer funds to other users securely
+- **Add Money**: Add funds to your wallet
+- **Bill Payments**: Pay electricity, mobile, and DTH bills
+- **Mobile Recharge**: Recharge prepaid mobile numbers
+- **Transaction History**: View and track all past transactions
+- **Profile Management**: Update personal information and manage account settings
+- **Referral System**: Invite friends and earn rewards
+- **Responsive Design**: Works seamlessly on desktop, tablet, and mobile devices
+
+## Tech Stack
+- **Frontend**: Next.js 14, TypeScript, TailwindCSS
+- **UI Components**: ShadCN UI, Radix UI, Framer Motion
+- **Backend**: Next.js API Routes (serverless functions)
+- **Database**: MongoDB Atlas
+- **Authentication**: JWT, HTTP-only cookies
+- **Form Validation**: React Hook Form, Zod
+- **Deployment**: Vercel
 
 ## Prerequisites
 - Node.js (v18 or higher)
-- MongoDB
 - npm or yarn package manager
+- MongoDB Atlas account
 
-## Installation
+## Environment Variables
+Create a `.env` file in the root directory with the following variables:
+
+```
+MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/database
+JWT_SECRET=your_secure_jwt_secret
+NEXTAUTH_URL=http://localhost:3000
+NEXTAUTH_SECRET=your_nextauth_secret
+NODE_ENV=development
+```
+
+For production deployment, set these variables in your Vercel project settings.
+
+## Installation and Local Development
+
 1. Clone the repository:
 ```bash
-git clone [repository-url]
-cd ym-pay
+git clone https://github.com/yourusername/YM-Pay.git
+cd YM-Pay
 ```
 
 2. Install dependencies:
 ```bash
-# Using npm
 npm install
-
-# Using yarn
+# or
 yarn install
 ```
 
-3. Configure environment variables:
-Create a `.env.local` file in the root directory with the following variables:
-```
-MONGODB_URI=your_mongodb_connection_string
-JWT_SECRET=your_jwt_secret
-```
-
-## Usage
-1. Start the development server:
+3. Run the development server:
 ```bash
-# Using npm
 npm run dev
-
-# Using yarn
+# or
 yarn dev
 ```
 
-2. Open [http://localhost:3000](http://localhost:3000) in your browser
+4. Open [http://localhost:3000](http://localhost:3000) in your browser to see the application
 
-## Development
-This project uses:
-- Next.js 14 for the framework
-- TypeScript for type safety
-- Tailwind CSS for styling
-- MongoDB for database
-- JWT for authentication
-- React Hook Form for form handling
-- Zod for schema validation
-- Radix UI for accessible components
+## Deployment to Vercel
 
-## Testing
-Run the linter:
+### Automatic Deployment (Recommended)
+1. Push your code to a GitHub repository
+2. Import your repository to Vercel
+3. Set up the required environment variables in the Vercel dashboard
+4. Vercel will automatically deploy your application
+
+### Manual Deployment
+1. Install the Vercel CLI:
 ```bash
-# Using npm
-npm run lint
-
-# Using yarn
-yarn lint
+npm install -g vercel
 ```
 
-## Deployment
-### Local Development
-1. Build the application:
+2. Login to your Vercel account:
 ```bash
-# Using npm
-npm run build
-
-# Using yarn
-yarn build
+vercel login
 ```
 
-2. Start the production server:
+3. Deploy to Vercel:
 ```bash
-# Using npm
-npm run start
-
-# Using yarn
-yarn start
+vercel
 ```
 
-### Production Deployment
-1. Set up environment variables in your hosting platform:
+4. For production deployment:
+```bash
+vercel --prod
 ```
-MONGODB_URI=your_production_mongodb_uri
-JWT_SECRET=your_secure_jwt_secret
-NEXT_PUBLIC_API_URL=your_production_api_url
-```
-
-2. Configure your hosting platform (e.g., Vercel, Netlify):
-   - Set Node.js version to 18 or higher
-   - Configure build command: `npm run build` or `yarn build`
-   - Set output directory to `.next`
-   - Configure environment variables
-
-3. Enable the following features in your hosting platform:
-   - Automatic HTTPS
-   - CDN caching
-   - Image optimization
-   - Serverless functions
 
 ## API Endpoints
+
 ### Authentication
 - `POST /api/auth/signup` - User registration
 - `POST /api/auth/login` - User login
 - `POST /api/auth/logout` - User logout
 - `GET /api/auth/me` - Get current user info
 
+### Users
+- `GET /api/user` - Get current user profile
+- `PUT /api/user/update` - Update user profile
+
 ### Transactions
 - `GET /api/transactions` - Get transaction history
 - `POST /api/transactions` - Create new transaction
 
-### User Management
-- `GET /api/users` - Get user list
-- `GET /api/user/:id` - Get specific user
+### Payments
+- `POST /api/send-money` - Send money to another user
+- `POST /api/add-money` - Add money to wallet
+- `POST /api/bills` - Pay bills
 
-## Security Considerations
-1. Environment Variables
-   - Never commit `.env.local` to version control
-   - Use strong, unique JWT secrets
-   - Rotate secrets regularly
+## Security Features
+- Password validation with strict requirements
+- JWT authentication with HTTP-only cookies
+- Protected API routes
+- Input sanitization and validation
+- Secure headers configuration
+- MongoDB connection with SSL encryption
 
-2. Database Security
-   - Use MongoDB Atlas with IP whitelisting
-   - Enable database encryption
-   - Regular backups
-
-3. API Security
-   - All API routes are protected by authentication
-   - Rate limiting on sensitive endpoints
-   - Input validation using Zod
-   - CORS configuration
-
-4. Best Practices
-   - Regular dependency updates
-   - Security audits
-   - Penetration testing
-   - Error logging and monitoring
+## File Structure
+```
+├── app/                # Next.js application
+│   ├── api/            # API routes
+│   ├── dashboard/      # Dashboard pages
+│   ├── login/          # Login page
+│   ├── signup/         # Signup page
+│   └── ...             # Other pages
+├── components/         # React components
+├── lib/                # Utility functions
+├── public/             # Static assets
+│   └── images/         # Images and icons
+├── styles/             # Global styles
+├── .env                # Environment variables
+├── next.config.mjs     # Next.js configuration
+├── vercel.json         # Vercel deployment configuration
+└── package.json        # Project dependencies
+```
 
 ## Contributing
 1. Fork the repository
@@ -160,15 +158,15 @@ NEXT_PUBLIC_API_URL=your_production_api_url
 5. Open a Pull Request
 
 ## License
-This project is licensed under the terms specified in the LICENSE file.
+This project is licensed under the MIT License - see the LICENSE file for details.
 
 ## Contact
 For support or inquiries, please contact:
-- Email: [yashwanthnaidum2408@gmail.com]
-- GitHub Issues: [https://github.com/yash6366]/issues
-- Security Vulnerabilities: [security-email@example.com]
+- Email: yashwanthnaidum2408@gmail.com
+- GitHub: [https://github.com/yash6366](https://github.com/yash6366)
 
 ## Acknowledgments
 - Next.js team for the amazing framework
-- Radix UI for the accessible components
-- Tailwind CSS for the utility-first CSS framework # YM_Pay
+- Vercel for hosting the application
+- MongoDB Atlas for database hosting
+- ShadCN UI for the beautiful UI components

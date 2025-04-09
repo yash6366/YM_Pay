@@ -17,6 +17,9 @@ import {
   Shield,
   Gift,
   TrendingUp,
+  Users,
+  Share2,
+  ClipboardCopy,
 } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -80,6 +83,47 @@ export default function DashboardPage() {
     { name: "Rewards", icon: Gift, path: "/dashboard/rewards", color: "bg-pink-100 text-pink-600" },
   ]
 
+  const handleReferral = async () => {
+    const referralLink = "https://ym-pay.vercel.app/";
+    const shareData = {
+      title: "Join me on YM-Pay!",
+      text: `Check out YM-Pay, a great app for payments: ${referralLink}`,
+      url: referralLink,
+    };
+
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+        toast({
+          title: "Shared successfully!",
+          description: "Referral link sent.",
+        });
+      } else {
+        await navigator.clipboard.writeText(referralLink);
+        toast({
+          title: "Link Copied!",
+          description: "Referral link copied to clipboard. Share it with your friends!",
+        });
+      }
+    } catch (err) {
+      console.error("Share failed:", err);
+      try {
+        await navigator.clipboard.writeText(referralLink);
+        toast({
+          title: "Link Copied!",
+          description: "Sharing failed. Link copied to clipboard instead.",
+        });
+      } catch (copyErr) {
+        console.error("Copy failed:", copyErr);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Could not share or copy the referral link.",
+        });
+      }
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -136,16 +180,6 @@ export default function DashboardPage() {
                     </CardContent>
                   </Card>
                 </Link>
-                <Link href="/dashboard/request-money">
-                  <Card className="hover:bg-gray-50 transition-colors cursor-pointer">
-                    <CardContent className="p-4 flex flex-col items-center justify-center">
-                      <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center mb-2">
-                        <ArrowDownIcon className="h-5 w-5 text-blue-600" />
-                      </div>
-                      <p className="text-sm font-medium">Request Money</p>
-                    </CardContent>
-                  </Card>
-                </Link>
                 <Link href="/dashboard/add-money">
                   <Card className="hover:bg-gray-50 transition-colors cursor-pointer">
                     <CardContent className="p-4 flex flex-col items-center justify-center">
@@ -159,13 +193,21 @@ export default function DashboardPage() {
                 <Link href="/dashboard/transactions">
                   <Card className="hover:bg-gray-50 transition-colors cursor-pointer">
                     <CardContent className="p-4 flex flex-col items-center justify-center">
-                      <div className="h-10 w-10 rounded-full bg-orange-100 flex items-center justify-center mb-2">
-                        <HistoryIcon className="h-5 w-5 text-orange-600" />
+                      <div className="h-10 w-10 rounded-full bg-yellow-100 flex items-center justify-center mb-2">
+                        <HistoryIcon className="h-5 w-5 text-yellow-600" />
                       </div>
-                      <p className="text-sm font-medium">Transactions</p>
+                      <p className="text-sm font-medium">History</p>
                     </CardContent>
                   </Card>
                 </Link>
+                <Card className="hover:bg-gray-50 transition-colors cursor-pointer" onClick={handleReferral}>
+                  <CardContent className="p-4 flex flex-col items-center justify-center">
+                    <div className="h-10 w-10 rounded-full bg-purple-100 flex items-center justify-center mb-2">
+                      <Users className="h-5 w-5 text-purple-600" />
+                    </div>
+                    <p className="text-sm font-medium">Refer a friend</p>
+                  </CardContent>
+                </Card>
               </div>
             </CardContent>
           </Card>

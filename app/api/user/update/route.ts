@@ -23,16 +23,29 @@ export async function PUT(request: Request) {
     }
 
     // Get update data from request body
-    const updateData = await request.json()
+    const { firstName, lastName, email, dob } = await request.json()
 
     // Connect to MongoDB
     client = await getMongoClient()
     const usersCollection = getCollection<User>(client, "USERS")
 
+    // Basic validation (add more robust validation)
+    if (!firstName || !lastName) {
+      return NextResponse.json({ message: 'First and Last name are required' }, { status: 400 })
+    }
+
     // Update user
     const result = await usersCollection.findOneAndUpdate(
       { _id: new ObjectId(decoded.userId) },
-      { $set: { ...updateData, updatedAt: new Date() } },
+      {
+        $set: {
+          firstName,
+          lastName,
+          email: email || null,
+          dob: dob ? new Date(dob) : null,
+          updatedAt: new Date()
+        }
+      },
       { returnDocument: "after", projection: { password: 0 } }
     )
 
