@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="goldGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FFD700"/>
+      <stop offset="50%" style="stop-color:#DAA520"/>
+      <stop offset="100%" style="stop-color:#B8860B"/>
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Black Background -->
+  <rect width="512" height="512" fill="black"/>
+
+  <!-- Laurel Wreath -->
+  <g filter="url(#glow)">
+    <!-- Left Wreath -->
+    <path d="M256 120 C180 180 180 332 256 392" stroke="url(#goldGradient)" stroke-width="2" fill="none"/>
+    <g fill="url(#goldGradient)">
+      <path d="M190 180 L210 190 L180 230 L160 220 Z"/>
+      <path d="M190 230 L210 240 L180 280 L160 270 Z"/>
+      <path d="M190 280 L210 290 L180 330 L160 320 Z"/>
+      <path d="M190 330 L210 340 L180 380 L160 370 Z"/>
+    </g>
+
+    <!-- Right Wreath -->
+    <path d="M256 120 C332 180 332 332 256 392" stroke="url(#goldGradient)" stroke-width="2" fill="none"/>
+    <g fill="url(#goldGradient)">
+      <path d="M322 180 L302 190 L332 230 L352 220 Z"/>
+      <path d="M322 230 L302 240 L332 280 L352 270 Z"/>
+      <path d="M322 280 L302 290 L332 330 L352 320 Z"/>
+      <path d="M322 330 L302 340 L332 380 L352 370 Z"/>
+    </g>
+  </g>
+
+  <!-- Shield -->
+  <path d="M256 150 L336 190 L336 270 C336 340 256 380 256 380 C256 380 176 340 176 270 L176 190 Z" 
+        fill="url(#goldGradient)" 
+        stroke="url(#goldGradient)" 
+        stroke-width="1"
+        filter="url(#glow)"/>
+
+  <!-- Hands with Money Bag Icon -->
+  <g stroke="black" stroke-width="2" fill="none">
+    <path d="M246 250 C256 240 276 240 286 250 M256 270 L256 250 M246 260 L266 260" />
+    <!-- Left Hand -->
+    <path d="M246 270 C236 275 236 285 246 290" />
+    <!-- Right Hand -->
+    <path d="M286 270 C296 275 296 285 286 290" />
+  </g>
+
+  <!-- YM-PAY Text -->
+  <text x="256" y="460" 
+        text-anchor="middle" 
+        font-family="Arial Black" 
+        font-size="48" 
+        fill="url(#goldGradient)" 
+        filter="url(#glow)">
+    YM-PAY
+  </text>
+</svg> 
