@@ -42,13 +42,16 @@ export function TransactionList({ transactions }: TransactionListProps) {
     if (transaction.type === "received") {
       return `Received from ${transaction.otherParty}`
     }
-    // For sent transactions, use the description as the title if it's a system transaction
-    if (transaction.otherParty === "Unknown" || transaction.otherParty === "System") {
-      // Extract the purpose from description (e.g., "Mobile recharge for...")
-      const purpose = transaction.description.split(" for ")[0]
-      return purpose.charAt(0).toUpperCase() + purpose.slice(1)
+    if (transaction.type === "sent") {
+      // For sent transactions, use the description as the title if it's a system transaction
+      if (transaction.otherParty === "Unknown" || transaction.otherParty === "System") {
+        // Extract the purpose from description (e.g., "Mobile recharge for...")
+        const purpose = transaction.description.split(" for ")[0]
+        return purpose.charAt(0).toUpperCase() + purpose.slice(1)
+      }
+      return `Sent to ${transaction.otherParty}`
     }
-    return `Sent to ${transaction.otherParty}`
+    return `Added to wallet`
   }
 
   return (
