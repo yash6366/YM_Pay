@@ -14,9 +14,10 @@ interface Transaction {
 
 interface TransactionListProps {
   transactions: Transaction[]
+  currentUserId?: string
 }
 
-export function TransactionList({ transactions }: TransactionListProps) {
+export function TransactionList({ transactions, currentUserId }: TransactionListProps) {
   if (!transactions.length) {
     return (
       <div className="py-12 text-center">
@@ -80,6 +81,11 @@ export function TransactionList({ transactions }: TransactionListProps) {
               {(transaction.otherParty === "Unknown" || transaction.otherParty === "System") && (
                 <p className="text-sm text-gray-500">
                   {transaction.description.split(" for ")[1]?.replace(/^\(|\)$/g, '')}
+                </p>
+              )}
+              {currentUserId && (
+                <p className="text-xs text-gray-400">
+                  {transaction.type === "sent" ? "Sent by you" : "Received by you"}
                 </p>
               )}
               <p className="text-sm text-gray-500">

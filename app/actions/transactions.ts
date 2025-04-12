@@ -65,14 +65,16 @@ export async function fetchTransactions(): Promise<DisplayTransaction[]> {
 
       if (t.type === TransactionType.ADD) {
         type = "added"
-      } else if (t.senderId === "system") {
+      } else if (t.receiverId === decoded.userId) {
+        // If current user is the receiver, it's a received transaction
         type = "received"
-        const receiver = userMap.get(t.receiverId)
-        otherParty = receiver ? `${receiver.firstName} ${receiver.lastName}` : "Unknown"
+        const sender = userMap.get(t.senderId)
+        otherParty = sender ? `${sender.firstName} ${sender.lastName}` : (t.senderId === "system" ? "System" : "Unknown")
       } else {
+        // If current user is the sender, it's a sent transaction
         type = "sent"
         const receiver = userMap.get(t.receiverId)
-        otherParty = receiver ? `${receiver.firstName} ${receiver.lastName}` : "Unknown"
+        otherParty = receiver ? `${receiver.firstName} ${receiver.lastName}` : (t.receiverId === "system" ? "System" : "Unknown")
       }
 
       return {
@@ -92,4 +94,4 @@ export async function fetchTransactions(): Promise<DisplayTransaction[]> {
       await closeMongoClient()
     }
   }
-} 
+}
