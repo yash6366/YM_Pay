@@ -46,15 +46,23 @@ export async function fetchTransactions(): Promise<DisplayTransaction[]> {
       if (t.receiverId !== "system") userIds.add(t.receiverId)
     })
 
-    const users = await usersCollection
-      .find({
-        _id: {
-          $in: Array.from(userIds).map(id => new ObjectId(id))
-        }
-      })
-      .toArray()
+    const userMap = new Map<string, { id: string; firstName: string; lastName: string }>()
+    if (userIds.size > 0) {
+      const userList = Array.from(userIds)
+      const placeholders = userList.map((_, i) => `$${i + 1}`).join(", ")
+      const usersRes = await client.query(
+        `SELECT "_id", "firstName", "lastName" FROM users WHERE "_id" IN (${placeholders})`,
+        userList
+      )
 
-    const userMap = new Map(users.map((u) => [u._id.toString(), u]))
+      usersRes.rows.forEach((u) => {
+        userMap.set(String(u._id), {
+          id: String(u._id),
+          firstName: u.firstName,
+          lastName: u.lastName,
+        })
+      })
+    }
 
     // Transform transactions
     return transactions.map((t) => {

@@ -1,172 +1,252 @@
-# YM-Pay
+# YM-Pay — Transaction-Safe Digital Wallet & Financial Ledger System
 
 <p align="center">
-  <img src="/public/images/YM-Pay-logo.jpg" alt="YM-Pay Logo" width="150" />
+  <img src="/public/images/YM-Pay-logo.jpg" alt="YM-Pay Logo" width="120" />
 </p>
 
-## Project Overview
-YM-Pay is a modern digital wallet and payment application built with Next.js, TypeScript, and NeonDB/Postgres. It enables users to send money, make bill payments, perform mobile recharges, and manage their financial transactions through a secure and intuitive interface.
+<p align="center">
+  <strong>Production-Grade Financial Architecture • ACID Transactions • Concurrency Control • Immutable Ledger • Idempotency</strong>
+</p>
 
-## Live Demo
-Visit the live demo at [https://ym-pay.vercel.app/](https://ym-pay.vercel.app/)
+<p align="center">
+  <a href="#architectural-overview">Architecture</a> •
+  <a href="#financial-integrity--concurrency-model">Financial Core</a> •
+  <a href="#idempotency-strategy">Idempotency</a> •
+  <a href="#security--sanitization">Security</a> •
+  <a href="#testing--verification">Testing</a> •
+  <a href="#production-readiness-boundaries">Production Boundaries</a> •
+  <a href="#interview-talking-points">Interview Talking Points</a>
+</p>
 
-## Features
-- **User Authentication**: Secure signup and login with JWT authentication
-- **Dashboard**: Comprehensive dashboard showing balance and quick actions
-- **Send Money**: Transfer funds to other users securely
-- **Add Money**: Add funds to your wallet
-- **Bill Payments**: Pay electricity, mobile, and DTH bills
-- **Mobile Recharge**: Recharge prepaid mobile numbers
-- **Transaction History**: View and track all past transactions
-- **Profile Management**: Update personal information and manage account settings
-- **Referral System**: Invite friends and earn rewards
-- **Responsive Design**: Works seamlessly on desktop, tablet, and mobile devices
+---
+
+## Executive Summary
+
+**YM-Pay** is a full-stack digital wallet and financial ledger system engineered with **TypeScript, Next.js, and PostgreSQL (Neon)**. It demonstrates the technical rigor required to build transactional payment software: strict ACID transaction boundaries, database-enforced invariants, deterministic lock ordering to prevent deadlocks, database-level ledger immutability triggers, database-backed idempotency, and sanitized data projections.
+
+---
+
+## Architectural Overview
+
+YM-Pay is structured into distinct, strictly separated layers:
+
+```mermaid
+flowchart TD
+    Client["Client Browser / UI (Next.js React 19)"]
+    MW["Edge Middleware (Correlation ID, JWT Guard, Rate Limiting)"]
+    API["API Route Handlers (/api/transactions/*, /api/auth/*)"]
+    TxWrapper["ACID Boundary (runInTransaction)"]
+    Locks["PostgreSQL Row Locks (ORDER BY _id FOR UPDATE)"]
+    Tables["PostgreSQL Schema & Constraints (users, transactions)"]
+    Trigger["PL/pgSQL Trigger (enforce_transactions_immutable)"]
+
+    Client -->|HTTP Request + JWT Cookie| MW
+    MW -->|Attach X-Request-ID| API
+    API --> TxWrapper
+    TxWrapper -->|Deterministic Lock Ordering| Locks
+    Locks -->|Atomic Debit & Credit| Tables
+    TxWrapper -->|Append-Only Ledger Insert| Trigger
+    Trigger -->|Persist Audit Record| Tables
+```
+
+### Architectural Layering:
+1. **Edge Middleware (`app/middleware.ts`)**: Injects distributed tracing (`X-Request-ID`), performs IP-based rate limiting via Upstash Redis, and validates HTTP-only JWT session cookies.
+2. **Application / API Layer (`app/api/*`)**: Validates payloads with Zod, derives user identity strictly from verified session tokens, and executes intent-based idempotency checks.
+3. **Financial Transaction Engine (`app/config/database.ts`)**: Wraps multi-statement operations in `runInTransaction`, executes deterministic row locking, conditional atomic balance updates, and append-only ledger inserts.
+4. **PostgreSQL Storage Engine**: Enforces mathematical invariants via DDL `CHECK` constraints, unique partial indexes, and PL/pgSQL immutability triggers.
+
+---
+
+## Financial Integrity & Concurrency Model
+
+### 1. Database-Enforced Financial Constraints
+* **Non-Negative Balance**: `CHECK (balance >= 0)` guarantees that account balances can never drop below zero at the storage engine level.
+* **Positive Transfer Amount**: `CHECK (amount > 0)` prevents zero or negative amounts from entering the ledger.
+
+### 2. Deterministic Row Lock Ordering (Deadlock Prevention)
+When User A transfers to User B ($A \rightarrow B$) while User B transfers to User A ($B \rightarrow A$) concurrently:
+* Standard locking causes circular wait deadlocks.
+* YM-Pay sorts participant UUIDs lexicographically before acquiring row locks:
+  ```typescript
+  const sortedIds = [String(sender._id), String(receiver._id)].sort();
+  await client.query(
+    `SELECT "_id" FROM users WHERE "_id" = $1 OR "_id" = $2 ORDER BY "_id" FOR UPDATE`,
+    [sortedIds[0], sortedIds[1]]
+  );
+  ```
+* Both threads lock `min(A, B)` first, then `max(A, B)`, transforming circular wait into a clean serial queue.
+
+### 3. Concurrent Overdraft & Double-Spend Prevention
+If a user with ₹100 submits two concurrent ₹80 transfers:
+1. Both requests attempt `SELECT ... FOR UPDATE` on the sender row.
+2. Thread 1 acquires the lock and executes atomic conditional debit:
+   ```sql
+   UPDATE users SET balance = balance - 80, "updatedAt" = NOW() 
+   WHERE "_id" = $1 AND balance >= 80 RETURNING balance;
+   ```
+   `rowCount = 1`, balance becomes ₹20. Thread 1 commits.
+3. Thread 2 acquires the lock and runs the same conditional debit. Because balance is now ₹20, `rowCount = 0`.
+4. Thread 2 detects zero rows updated, raises an `AppError("Insufficient balance", 400)`, and rolls back.
+
+### 4. Database-Level Ledger Immutability Trigger
+To guarantee audit compliance and non-repudiation, the `transactions` table is protected by a PostgreSQL trigger:
+```sql
+CREATE OR REPLACE FUNCTION prevent_transaction_mutation()
+RETURNS TRIGGER AS $$
+BEGIN
+  RAISE EXCEPTION 'Financial ledger immutability violation: UPDATE and DELETE operations are strictly prohibited on the transactions table.';
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER enforce_transactions_immutable
+BEFORE UPDATE OR DELETE ON transactions
+FOR EACH ROW
+EXECUTE FUNCTION prevent_transaction_mutation();
+```
+
+---
+
+## Idempotency Strategy
+
+1. **Pre-Execution Intent Comparison**: Checks if the `idempotencyKey` exists in the database.
+   * *Same Intent* (same sender, receiver, amount, type): Returns the cached original success result (`200 OK`).
+   * *Mismatched Intent* (differing amount or recipient): Returns `409 Conflict`.
+2. **Database Unique Constraint**:
+   ```sql
+   CREATE UNIQUE INDEX IF NOT EXISTS transactions_idempotency_idx 
+   ON transactions ("idempotencyKey") 
+   WHERE "idempotencyKey" IS NOT NULL;
+   ```
+   If two duplicate requests arrive simultaneously, PostgreSQL unique violation (`23505`) catches the race condition and returns HTTP 409.
+
+---
+
+## Security & Sanitization
+
+* **Defense in Depth**: Authenticated user ID is derived strictly from JWT claims (`decoded.userId`), eliminating Insecure Direct Object Reference (IDOR) vulnerabilities.
+* **Sensitive Field Sanitization (SEC-01)**: User projections in transaction history and server actions explicitly select only safe fields (`id`, `firstName`, `lastName`, `phone`). Password hashes, salts, and secrets are never returned in responses.
+* **Cookie Transport**: JWT tokens are transported exclusively via `HttpOnly`, `SameSite=Lax`, and `Secure` (in production) cookies.
+* **Parameterized SQL**: All database operations use `$1, $2, ...` query parameters to prevent SQL injection.
+* **Observability & Request Correlation**: Middleware attaches an `X-Request-ID` UUID to every request/response for structured logging and distributed tracing.
+
+---
 
 ## Tech Stack
-- **Frontend**: Next.js 14, TypeScript, TailwindCSS
-- **UI Components**: ShadCN UI, Radix UI, Framer Motion
-- **Backend**: Next.js API Routes (serverless functions)
-- **Database**: NeonDB (Postgres)
-- **Authentication**: JWT, HTTP-only cookies
-- **Form Validation**: React Hook Form, Zod
-- **Deployment**: Vercel
 
-## Prerequisites
-- Node.js (v18 or higher)
-- npm or yarn package manager
-- NeonDB account
+| Component | Technology | Rationale |
+|---|---|---|
+| **Framework** | Next.js 16 (App Router) + React 19 | Serverless API routes, server actions, and modern SSR UI. |
+| **Language** | TypeScript 5.9 | Strict type safety across frontend and backend boundaries. |
+| **Database** | PostgreSQL (Neon) | Full ACID compliance, row locking, CHECK constraints, triggers. |
+| **Styling** | TailwindCSS + Radix UI | Accessible, clean UI components. |
+| **Authentication** | Stateless JWT + Bcrypt | Cryptographic session tokens with secure cookie transport. |
+| **Validation** | Zod | Runtime schema validation. |
+| **Testing** | Node.js Test Runner (`node:test`) | Ultra-fast native test runner with zero extra framework overhead. |
 
-## Environment Variables
-Create a `.env` file in the root directory with the following variables:
+---
 
-```
-NEON_DATABASE_URL=postgresql://username:password@ep-xxxxx.us-east-1.aws.neon.tech/neondb?sslmode=require
-JWT_SECRET=your_secure_jwt_secret
-NEXTAUTH_URL=http://localhost:3000
-NEXTAUTH_SECRET=your_nextauth_secret
-NODE_ENV=development
-```
+## Testing & Verification
 
-For production deployment, set these variables in your Vercel project settings.
+YM-Pay includes a comprehensive test suite certifying unit, financial invariant, and live PostgreSQL integration behaviors.
 
-## Installation and Local Development
-
-1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/YM-Pay.git
+# 1. Run Unit & Invariant Tests
+npm test
+
+# 2. Run Live PostgreSQL Integration & Concurrency Tests
+npm run test:integration
+
+# 3. TypeScript Typecheck
+npm run typecheck
+
+# 4. Lint
+npm run lint
+
+# 5. Production Build
+npm run build
+```
+
+### Verified Test Scenarios:
+- **21 Unit Tests**: Password validation, phone validation, money normalization, JWT signing/verifying, cookie security, date helpers, idempotency matching/conflict logic, lock order sorting, and user projection sanitization.
+- **9 Live PostgreSQL Tests**: Non-negative balance constraint, positive amount constraint, ledger immutability trigger, ACID atomic transfer, rollback on error, concurrent overdraft protection, opposing transfer deadlock prevention, idempotency race protection, and wealth conservation invariant.
+
+---
+
+## Production Readiness Boundaries
+
+To maintain engineering integrity, YM-Pay clearly distinguishes between implemented capabilities and real-world payment processor infrastructure:
+
+| Feature / Domain | YM-Pay Status | Real-World Production Need |
+|---|---|---|
+| **Ledger & Wallet Core** | **Implemented & Tested** | Internal double-entry accounting, ACID boundaries, row locking. |
+| **Idempotency & Deadlock Defense** | **Implemented & Tested** | Deterministic lock ordering, partial unique index. |
+| **KYC / AML** | *Out of Scope* | Government identity verification, PEP/sanctions screening (OFAC). |
+| **External Payment Rails** | *Out of Scope* | Real-time gross settlement via UPI, IMPS, FedNow, ACH, or SEPA. |
+| **PCI DSS Level 1** | *Out of Scope* | Storing/processing raw 16-digit credit card primary account numbers (PAN). |
+| **End-of-Day Reconciliation** | *Out of Scope* | Automated settlement reconciliation against physical bank reserve statements. |
+
+For detailed analysis, see [docs/PRODUCTION_READINESS.md](file:///d:/Projects/YM_Pay/docs/PRODUCTION_READINESS.md).
+
+---
+
+## Documentation & Architecture Decision Records (ADRs)
+
+Detailed engineering specifications and design records:
+* [Architecture Blueprint](file:///d:/Projects/YM_Pay/docs/ARCHITECTURE.md)
+* [Financial Integrity Specification](file:///d:/Projects/YM_Pay/docs/FINANCIAL_INTEGRITY.md)
+* [Security & Threat Model](file:///d:/Projects/YM_Pay/docs/SECURITY.md)
+* [Testing Architecture](file:///d:/Projects/YM_Pay/docs/TESTING.md)
+* [Production Readiness Analysis](file:///d:/Projects/YM_Pay/docs/PRODUCTION_READINESS.md)
+* [ADR-001: PostgreSQL as Financial Database](file:///d:/Projects/YM_Pay/docs/adr/ADR-001-postgresql-financial-database.md)
+* [ADR-002: ACID Transaction Boundaries](file:///d:/Projects/YM_Pay/docs/adr/ADR-002-acid-transaction-boundaries.md)
+* [ADR-003: Database Financial Invariants](file:///d:/Projects/YM_Pay/docs/adr/ADR-003-database-financial-invariants.md)
+* [ADR-004: Idempotency Strategy](file:///d:/Projects/YM_Pay/docs/adr/ADR-004-idempotency.md)
+* [ADR-005: Deterministic Lock Ordering](file:///d:/Projects/YM_Pay/docs/adr/ADR-005-deterministic-lock-ordering.md)
+* [ADR-006: Append-Only Immutable Ledger](file:///d:/Projects/YM_Pay/docs/adr/ADR-006-immutable-ledger.md)
+* [ADR-007: Monetary Precision Strategy](file:///d:/Projects/YM_Pay/docs/adr/ADR-007-monetary-precision.md)
+* [ADR-008: Authentication Architecture](file:///d:/Projects/YM_Pay/docs/adr/ADR-008-authentication.md)
+
+---
+
+## Local Development & Setup
+
+### Prerequisites
+- Node.js (>= 20.9.0)
+- PostgreSQL or Neon account
+
+### Installation
+```bash
+# 1. Clone repository
+git clone https://github.com/yash6366/YM-Pay.git
 cd YM-Pay
-```
 
-2. Install dependencies:
-```bash
+# 2. Install dependencies
 npm install
-# or
-yarn install
-```
 
-3. Run the development server:
-```bash
+# 3. Configure environment variables
+cp .env.example .env
+# Edit .env with your NEON_DATABASE_URL and JWT_SECRET
+
+# 4. Start development server
 npm run dev
-# or
-yarn dev
 ```
 
-4. Open [http://localhost:3000](http://localhost:3000) in your browser to see the application
+---
 
-## Deployment to Vercel
+## Interview Talking Points
 
-### Automatic Deployment (Recommended)
-1. Push your code to a GitHub repository
-2. Import your repository to Vercel
-3. Set up the required environment variables in the Vercel dashboard
-4. Vercel will automatically deploy your application
+1. **How does YM-Pay prevent double-spending?**
+   * Combines PostgreSQL row locks (`SELECT ... FOR UPDATE`) with atomic conditional balance updates (`WHERE balance >= amount`) inside an ACID transaction (`runInTransaction`).
+2. **How are deadlocks prevented in concurrent bidirectional transfers?**
+   * Deterministic lock ordering: sender and receiver UUIDs are sorted lexicographically before acquiring row locks, turning circular wait into a linear wait.
+3. **How is the financial ledger protected against tampering?**
+   * Enforced at the database level by a PL/pgSQL trigger `enforce_transactions_immutable` that aborts any `UPDATE` or `DELETE` statement.
+4. **How does idempotency handle network retries?**
+   * Checks the unique `idempotencyKey`. Same intent returns cached result; differing intent returns `409 Conflict`. Simultaneous race conditions are caught by PostgreSQL partial unique index.
+5. **How was the sensitive data leak (SEC-01) resolved?**
+   * Eliminated broad `SELECT *` object mapping by enforcing explicit projection of public fields (`id`, `firstName`, `lastName`, `phone`), ensuring password hashes and private metadata are never exposed in API responses.
 
-### Manual Deployment
-1. Install the Vercel CLI:
-```bash
-npm install -g vercel
-```
-
-2. Login to your Vercel account:
-```bash
-vercel login
-```
-
-3. Deploy to Vercel:
-```bash
-vercel
-```
-
-4. For production deployment:
-```bash
-vercel --prod
-```
-
-## API Endpoints
-
-### Authentication
-- `POST /api/auth/signup` - User registration
-- `POST /api/auth/login` - User login
-- `POST /api/auth/logout` - User logout
-- `GET /api/auth/me` - Get current user info
-
-### Users
-- `GET /api/user` - Get current user profile
-- `PUT /api/user/update` - Update user profile
-
-### Transactions
-- `GET /api/transactions` - Get transaction history
-- `POST /api/transactions` - Create new transaction
-
-### Payments
-- `POST /api/send-money` - Send money to another user
-- `POST /api/add-money` - Add money to wallet
-- `POST /api/bills` - Pay bills
-
-## Security Features
-- Password validation with strict requirements
-- JWT authentication with HTTP-only cookies
-- Protected API routes
-- Input sanitization and validation
-- Secure headers configuration
-- NeonDB connection with SSL encryption
-
-## File Structure
-```
-├── app/                # Next.js application
-│   ├── api/            # API routes
-│   ├── dashboard/      # Dashboard pages
-│   ├── login/          # Login page
-│   ├── signup/         # Signup page
-│   └── ...             # Other pages
-├── components/         # React components
-├── lib/                # Utility functions
-├── public/             # Static assets
-│   └── images/         # Images and icons
-├── styles/             # Global styles
-├── .env                # Environment variables
-├── next.config.mjs     # Next.js configuration
-├── vercel.json         # Vercel deployment configuration
-└── package.json        # Project dependencies
-```
-
-## Contributing
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
+---
 
 ## License
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## Contact
-For support or inquiries, please contact:
-- Email: yashwanthnaidum2408@gmail.com
-- GitHub: [https://github.com/yash6366](https://github.com/yash6366)
-
-## Acknowledgments
-- Next.js team for the amazing framework
-- Vercel for hosting the application
-- NeonDB for database hosting
-- ShadCN UI for the beautiful UI components
+Licensed under the [MIT License](LICENSE).

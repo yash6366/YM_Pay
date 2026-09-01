@@ -20,10 +20,17 @@ export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname
   const isApiRoute = pathname.startsWith("/api")
 
+  // Request correlation: preserve incoming valid UUID or generate fresh correlation ID
+  const incomingRequestId = request.headers.get("x-request-id")
+  const requestId = incomingRequestId && /^[a-zA-Z0-9_-]{8,64}$/.test(incomingRequestId)
+    ? incomingRequestId
+    : crypto.randomUUID()
+
   // Handle CORS Preflight requests
   if (request.method === "OPTIONS" && isApiRoute) {
     const preflightResponse = new NextResponse(null, { status: 204 })
     attachCorsHeaders(preflightResponse)
+    preflightResponse.headers.set("X-Request-ID", requestId)
     return preflightResponse
   }
 
@@ -48,6 +55,7 @@ export async function middleware(request: NextRequest) {
                 "X-RateLimit-Limit": limit.toString(),
                 "X-RateLimit-Remaining": remaining.toString(),
                 "X-RateLimit-Reset": reset.toString(),
+                "X-Request-ID": requestId,
               },
             }
           )
@@ -63,7 +71,8 @@ export async function middleware(request: NextRequest) {
     const isPublicAuthRoute =
       pathname.startsWith("/api/auth/login") ||
       pathname.startsWith("/api/auth/signup") ||
-      pathname.startsWith("/api/auth/logout")
+      pathname.startsWith("/api/auth/logout") ||
+      pathname.startsWith("/api/health")
 
     if (!isPublicAuthRoute) {
       const token = request.cookies.get(AUTH_COOKIE_NAME)?.value
@@ -73,7 +82,10 @@ export async function middleware(request: NextRequest) {
           JSON.stringify({ message: "Unauthorized. Please log in." }),
           {
             status: 401,
-            headers: { "Content-Type": "application/json" },
+            headers: {
+              "Content-Type": "application/json",
+              "X-Request-ID": requestId,
+            },
           }
         )
         attachCorsHeaders(unauthResponse)
@@ -87,7 +99,10 @@ export async function middleware(request: NextRequest) {
           JSON.stringify({ message: "Invalid or expired session. Please log in again." }),
           {
             status: 401,
-            headers: { "Content-Type": "application/json" },
+            headers: {
+              "Content-Type": "application/json",
+              "X-Request-ID": requestId,
+            },
           }
         )
         attachCorsHeaders(invalidTokenResponse)
@@ -96,7 +111,16 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  const response = NextResponse.next()
+  const requestHeaders = new Headers(request.headers)
+  requestHeaders.set("X-Request-ID", requestId)
+
+  const response = NextResponse.next({
+    request: {
+      headers: requestHeaders,
+    },
+  })
+
+  response.headers.set("X-Request-ID", requestId)
   if (isApiRoute) {
     attachCorsHeaders(response)
   }

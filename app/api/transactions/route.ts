@@ -36,11 +36,24 @@ export async function GET(request: Request) {
       if (t.receiverId !== "system") userIds.add(t.receiverId)
     })
 
-    const users = await usersCollection
-      .find({ _id: { $in: Array.from(userIds).map((id) => new ObjectId(id)) } })
-      .toArray()
+    const userMap = new Map<string, { id: string; firstName: string; lastName: string; phone: string }>()
+    if (userIds.size > 0) {
+      const userList = Array.from(userIds)
+      const placeholders = userList.map((_, i) => `$${i + 1}`).join(", ")
+      const usersRes = await client.query(
+        `SELECT "_id", "firstName", "lastName", phone FROM users WHERE "_id" IN (${placeholders})`,
+        userList
+      )
 
-    const userMap = new Map(users.map((u) => [u._id.toString(), u]))
+      usersRes.rows.forEach((u) => {
+        userMap.set(String(u._id), {
+          id: String(u._id),
+          firstName: u.firstName,
+          lastName: u.lastName,
+          phone: u.phone,
+        })
+      })
+    }
 
     const formattedTransactions = transactions.map((t) => ({
       id: t._id.toString(),
@@ -48,8 +61,8 @@ export async function GET(request: Request) {
       amount: Number(t.amount ?? 0),
       timestamp: t.timestamp,
       description: t.description,
-      sender: t.senderId === "system" ? "System" : userMap.get(t.senderId),
-      receiver: t.receiverId === "system" ? "System" : userMap.get(t.receiverId),
+      sender: t.senderId === "system" ? "System" : (userMap.get(t.senderId) ?? null),
+      receiver: t.receiverId === "system" ? "System" : (userMap.get(t.receiverId) ?? null),
     }))
 
     return NextResponse.json({
