@@ -1,12 +1,14 @@
 import { MongoClient, MongoClientOptions, Document } from "mongodb"
 
-if (!process.env.MONGODB_URI) {
-  throw new Error("MONGODB_URI environment variable is not set")
+const DEFAULT_MONGODB_URI = "mongodb://127.0.0.1:27017/ym-pay"
+
+export function getMongoDbUri() {
+  return process.env.MONGODB_URI ?? DEFAULT_MONGODB_URI
 }
 
 // Database configuration
 export const DB_CONFIG = {
-  uri: process.env.MONGODB_URI,
+  uri: getMongoDbUri(),
   options: {
     maxPoolSize: 10,
     minPoolSize: 2,

@@ -9,8 +9,9 @@ export async function POST(request: Request) {
   let client = null
 
   try {
+    const cookieStore = await cookies()
     // Get token from cookie
-    const token = cookies().get("token")?.value
+    const token = cookieStore.get("token")?.value
     if (!token) {
       throw new AppError("Unauthorized", 401)
     }

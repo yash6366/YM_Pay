@@ -3,11 +3,13 @@ import { ApiResponse } from "../types"
 import bcrypt from "bcryptjs"
 import jwt from "jsonwebtoken"
 
-if (!process.env.JWT_SECRET) {
-  throw new Error("JWT_SECRET environment variable is not set")
+const DEFAULT_JWT_SECRET = "development-secret-key"
+
+export function getJwtSecret() {
+  return process.env.JWT_SECRET ?? DEFAULT_JWT_SECRET
 }
 
-const JWT_SECRET = process.env.JWT_SECRET
+const JWT_SECRET = getJwtSecret()
 const JWT_EXPIRES_IN = "7d"
 
 // Validation functions

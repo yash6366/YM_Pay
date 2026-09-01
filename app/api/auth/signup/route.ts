@@ -8,6 +8,7 @@ export async function POST(request: Request) {
   let client = null
 
   try {
+    const cookieStore = await cookies()
     const body: SignupRequest = await request.json()
     const { firstName, lastName, phone, password } = body
 
@@ -59,7 +60,7 @@ export async function POST(request: Request) {
     const token = generateToken(user._id.toString())
 
     // Set cookie
-    cookies().set("token", token, {
+    cookieStore.set("token", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "strict",

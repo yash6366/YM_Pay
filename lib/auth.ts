@@ -1,6 +1,6 @@
-import { jwtVerify } from 'jose';
+import { jwtVerify } from 'jose'
 import { cookies } from 'next/headers'
-import { AppError } from '@/lib/error'
+import { AppError } from './error'
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key'
 
@@ -31,8 +31,8 @@ export async function getCurrentUser() {
 export function generateToken(userId: string) {
   const payload = {
     userId,
-    exp: Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60, // 7 days
+    exp: Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60,
   }
 
   return new TextEncoder().encode(JSON.stringify(payload))
-} 
+}

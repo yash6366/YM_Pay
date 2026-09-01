@@ -3,8 +3,9 @@ import { cookies } from "next/headers"
 
 export async function POST() {
   try {
+    const cookieStore = await cookies()
     // Clear the token cookie
-    cookies().delete("token")
+    cookieStore.delete("token")
 
     return NextResponse.json({ message: "Logged out successfully" }, { status: 200 })
   } catch (error) {

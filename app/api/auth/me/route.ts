@@ -9,8 +9,9 @@ export async function GET() {
   let client = null
 
   try {
+    const cookieStore = await cookies()
     // Get token from cookies
-    const token = cookies().get("token")?.value
+    const token = cookieStore.get("token")?.value
 
     if (!token) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 })
