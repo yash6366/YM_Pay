@@ -1,11 +1,11 @@
-import { Document, ObjectId } from "mongodb"
 import { TransactionType } from "../config/database"
 
 // User interface
-export interface User extends Document {
-  _id: ObjectId
+export interface User {
+  _id: string
   firstName: string
   lastName: string
+  email?: string | null
   phone: string
   password: string
   balance: number
@@ -14,14 +14,16 @@ export interface User extends Document {
 }
 
 // Transaction interface
-export interface Transaction extends Document {
-  _id: ObjectId
+export interface Transaction {
+  _id: string
   senderId: string
   receiverId: string
   amount: number
   timestamp: Date
   description: string
   type: TransactionType
+  status?: "pending" | "success" | "failed" | "reversed"
+  idempotencyKey?: string
 }
 
 // API Response interfaces
@@ -58,6 +60,7 @@ export interface LoginRequest {
 export interface SignupRequest {
   firstName: string
   lastName: string
+  email?: string
   phone: string
   password: string
 }

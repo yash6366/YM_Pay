@@ -9,7 +9,10 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "test": "node --experimental-strip-types --test tests/auth-config.test.ts tests/financial-transactions.test.ts",
+    "test:integration": "node --experimental-strip-types --test tests/financial-transactions.integration.test.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.3.4",
@@ -33,7 +36,7 @@
     "@radix-ui/react-select": "^2.0.0",
     "@radix-ui/react-separator": "^1.0.3",
     "@radix-ui/react-slider": "^1.1.2",
-    "@radix-ui/react-slot": "^1.0.2",
+    "@radix-ui/react-slot": "^1.3.3",
     "@radix-ui/react-switch": "^1.0.3",
     "@radix-ui/react-tabs": "^1.0.4",
     "@radix-ui/react-toast": "^1.1.5",
@@ -56,9 +59,9 @@
     "jose": "^6.0.10",
     "jsonwebtoken": "^9.0.2",
     "lucide-react": "^1.38.0",
-    "mongodb": "^6.3.0",
     "next": "^16.3.4",
     "next-themes": "^0.4.6",
+    "pg": "^8.23.0",
     "qrcode.react": "^4.2.0",
     "react": "^19.2.8",
     "react-day-picker": "^8.10.0",
@@ -75,13 +78,14 @@
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
     "@types/jsonwebtoken": "^9.0.5",
-    "@types/node": "^20.11.19",
+    "@types/node": "20.19.43",
+    "@types/pg": "^8.23.1",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
     "eslint": "^9.0.0",
     "eslint-config-next": "^16.3.4",
     "postcss": "^8.4.35",
     "tailwindcss": "^3.4.1",
-    "typescript": "^5.3.3"
+    "typescript": "5.9.3"
   }
 }

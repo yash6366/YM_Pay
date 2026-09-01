@@ -1,38 +1,49 @@
 import { NextResponse } from "next/server"
 import { cookies } from "next/headers"
-import { getMongoClient, closeMongoClient, getCollection } from "@/app/config/database"
+import { getNeonClient, getCollection, COLLECTIONS } from "@/app/config/database"
 import { SignupRequest, LoginResponse, User } from "@/app/types"
-import { hashPassword, generateToken, isValidPhone, isValidPassword, handleError, AppError } from "@/app/utils"
+import {
+  hashPassword,
+  generateToken,
+  isValidPhone,
+  isValidPassword,
+  handleError,
+  AppError,
+  AUTH_COOKIE_NAME,
+  getAuthCookieOptions,
+} from "@/app/utils"
 
 export async function POST(request: Request) {
-  let client = null
-
   try {
     const cookieStore = await cookies()
     const body: SignupRequest = await request.json()
-    const { firstName, lastName, phone, password } = body
+    const { firstName, lastName, email, phone, password } = body
 
     // Validate input
     if (!firstName || !lastName || !phone || !password) {
-      throw new AppError("All fields are required")
+      throw new AppError("All fields are required", 400)
+    }
+
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      throw new AppError("Invalid email format", 400)
     }
 
     if (!isValidPhone(phone)) {
-      throw new AppError("Invalid phone number format")
+      throw new AppError("Invalid phone number format", 400)
     }
 
     if (!isValidPassword(password)) {
-      throw new AppError("Password must be at least 6 characters long")
+      throw new AppError("Password must be at least 8 characters long, include uppercase, lowercase, a number, and a special character", 400)
     }
 
     // Connect to database
-    client = await getMongoClient()
-    const usersCollection = getCollection<User>(client, "USERS")
+    const client = await getNeonClient()
+    const usersCollection = getCollection<User>(client, COLLECTIONS.USERS)
 
     // Check if user already exists
     const existingUser = await usersCollection.findOne({ phone })
     if (existingUser) {
-      throw new AppError("User already exists", 409)
+      throw new AppError("User already exists with this phone number", 409)
     }
 
     // Hash password
@@ -42,6 +53,7 @@ export async function POST(request: Request) {
     const newUser: Omit<User, "_id"> = {
       firstName,
       lastName,
+      email: email?.trim() || null,
       phone,
       password: hashedPassword,
       balance: 0,
@@ -60,12 +72,7 @@ export async function POST(request: Request) {
     const token = generateToken(user._id.toString())
 
     // Set cookie
-    cookieStore.set("token", token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-      maxAge: 7 * 24 * 60 * 60, // 7 days
-    })
+    cookieStore.set(AUTH_COOKIE_NAME, token, getAuthCookieOptions())
 
     // Return response
     const response: LoginResponse = {
@@ -75,17 +82,12 @@ export async function POST(request: Request) {
         firstName: user.firstName,
         lastName: user.lastName,
         phone: user.phone,
-        balance: user.balance,
+        balance: Number(user.balance ?? 0),
       },
     }
 
     return NextResponse.json({ message: "User created successfully", data: response })
   } catch (error) {
     return handleError(error)
-  } finally {
-    if (client) {
-      await closeMongoClient()
-    }
   }
 }
-

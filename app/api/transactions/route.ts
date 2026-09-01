@@ -1,34 +1,26 @@
 import { NextResponse } from "next/server"
 import { cookies } from "next/headers"
-import { ObjectId } from "mongodb"
-import { getMongoClient, closeMongoClient, getCollection } from "@/app/config/database"
+import { ObjectId, getNeonClient, getCollection, COLLECTIONS } from "@/app/config/database"
 import { Transaction, User } from "@/app/types"
-import { verifyToken, handleError, AppError, getStartOfDay, getEndOfDay } from "@/app/utils"
+import { verifyToken, handleError, AppError, getStartOfDay, getEndOfDay, AUTH_COOKIE_NAME } from "@/app/utils"
 
 export async function GET(request: Request) {
-  let client = null
-
   try {
     const cookieStore = await cookies()
-    // Get token from cookie
-    const token = cookieStore.get("token")?.value
+    const token = cookieStore.get(AUTH_COOKIE_NAME)?.value || cookieStore.get("token")?.value
     if (!token) {
       throw new AppError("Unauthorized", 401)
     }
 
-    // Verify token
     const decoded = verifyToken(token)
 
-    // Connect to database
-    client = await getMongoClient()
-    const transactionsCollection = getCollection<Transaction>(client, "TRANSACTIONS")
+    const client = await getNeonClient()
+    const transactionsCollection = getCollection<Transaction>(client, COLLECTIONS.TRANSACTIONS)
 
-    // Get date range
     const startDate = getStartOfDay()
     startDate.setDate(startDate.getDate() - 30) // Last 30 days
     const endDate = getEndOfDay()
 
-    // Get transactions
     const transactions = await transactionsCollection
       .find({
         $or: [{ senderId: decoded.userId }, { receiverId: decoded.userId }],
@@ -37,8 +29,7 @@ export async function GET(request: Request) {
       .sort({ timestamp: -1 })
       .toArray()
 
-    // Get user details for each transaction
-    const usersCollection = getCollection<User>(client, "USERS")
+    const usersCollection = getCollection<User>(client, COLLECTIONS.USERS)
     const userIds = new Set<string>()
     transactions.forEach((t) => {
       if (t.senderId !== "system") userIds.add(t.senderId)
@@ -51,11 +42,10 @@ export async function GET(request: Request) {
 
     const userMap = new Map(users.map((u) => [u._id.toString(), u]))
 
-    // Format transactions
     const formattedTransactions = transactions.map((t) => ({
       id: t._id.toString(),
       type: t.type,
-      amount: t.amount,
+      amount: Number(t.amount ?? 0),
       timestamp: t.timestamp,
       description: t.description,
       sender: t.senderId === "system" ? "System" : userMap.get(t.senderId),
@@ -68,10 +58,5 @@ export async function GET(request: Request) {
     })
   } catch (error) {
     return handleError(error)
-  } finally {
-    if (client) {
-      await closeMongoClient()
-    }
   }
 }
-

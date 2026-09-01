@@ -1,13 +1,18 @@
 import { NextResponse } from "next/server"
 import { cookies } from "next/headers"
-import { getMongoClient, closeMongoClient, getCollection } from "@/app/config/database"
+import { getNeonClient, getCollection, COLLECTIONS } from "@/app/config/database"
 import { LoginRequest, LoginResponse, User } from "@/app/types"
-import { comparePasswords, generateToken, isValidPhone, isValidPassword, handleError, AppError } from "@/app/utils"
+import {
+  comparePasswords,
+  generateToken,
+  handleError,
+  AppError,
+  AUTH_COOKIE_NAME,
+  getAuthCookieOptions,
+} from "@/app/utils"
 import { phoneSchema, passwordSchema } from "@/app/utils/validation"
 
 export async function POST(request: Request) {
-  let client = null
-
   try {
     const cookieStore = await cookies()
     const body: LoginRequest = await request.json()
@@ -22,8 +27,8 @@ export async function POST(request: Request) {
     }
 
     // Connect to database
-    client = await getMongoClient()
-    const usersCollection = getCollection<User>(client, "USERS")
+    const client = await getNeonClient()
+    const usersCollection = getCollection<User>(client, COLLECTIONS.USERS)
 
     // Find user
     const user = await usersCollection.findOne({ phone })
@@ -41,12 +46,7 @@ export async function POST(request: Request) {
     const token = generateToken(user._id.toString())
 
     // Set cookie
-    cookieStore.set("token", token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-      maxAge: 7 * 24 * 60 * 60, // 7 days
-    })
+    cookieStore.set(AUTH_COOKIE_NAME, token, getAuthCookieOptions())
 
     // Return response
     const response: LoginResponse = {
@@ -56,17 +56,12 @@ export async function POST(request: Request) {
         firstName: user.firstName,
         lastName: user.lastName,
         phone: user.phone,
-        balance: user.balance,
+        balance: Number(user.balance ?? 0),
       },
     }
 
     return NextResponse.json({ message: "Login successful", data: response })
   } catch (error) {
     return handleError(error)
-  } finally {
-    if (client) {
-      await closeMongoClient()
-    }
   }
 }
-

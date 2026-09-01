@@ -5,7 +5,7 @@
 </p>
 
 ## Project Overview
-YM-Pay is a modern digital wallet and payment application built with Next.js, TypeScript, and MongoDB. It enables users to send money, make bill payments, perform mobile recharges, and manage their financial transactions through a secure and intuitive interface.
+YM-Pay is a modern digital wallet and payment application built with Next.js, TypeScript, and NeonDB/Postgres. It enables users to send money, make bill payments, perform mobile recharges, and manage their financial transactions through a secure and intuitive interface.
 
 ## Live Demo
 Visit the live demo at [https://ym-pay.vercel.app/](https://ym-pay.vercel.app/)
@@ -26,7 +26,7 @@ Visit the live demo at [https://ym-pay.vercel.app/](https://ym-pay.vercel.app/)
 - **Frontend**: Next.js 14, TypeScript, TailwindCSS
 - **UI Components**: ShadCN UI, Radix UI, Framer Motion
 - **Backend**: Next.js API Routes (serverless functions)
-- **Database**: MongoDB Atlas
+- **Database**: NeonDB (Postgres)
 - **Authentication**: JWT, HTTP-only cookies
 - **Form Validation**: React Hook Form, Zod
 - **Deployment**: Vercel
@@ -34,13 +34,13 @@ Visit the live demo at [https://ym-pay.vercel.app/](https://ym-pay.vercel.app/)
 ## Prerequisites
 - Node.js (v18 or higher)
 - npm or yarn package manager
-- MongoDB Atlas account
+- NeonDB account
 
 ## Environment Variables
 Create a `.env` file in the root directory with the following variables:
 
 ```
-MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/database
+NEON_DATABASE_URL=postgresql://username:password@ep-xxxxx.us-east-1.aws.neon.tech/neondb?sslmode=require
 JWT_SECRET=your_secure_jwt_secret
 NEXTAUTH_URL=http://localhost:3000
 NEXTAUTH_SECRET=your_nextauth_secret
@@ -129,7 +129,7 @@ vercel --prod
 - Protected API routes
 - Input sanitization and validation
 - Secure headers configuration
-- MongoDB connection with SSL encryption
+- NeonDB connection with SSL encryption
 
 ## File Structure
 ```
@@ -168,5 +168,5 @@ For support or inquiries, please contact:
 ## Acknowledgments
 - Next.js team for the amazing framework
 - Vercel for hosting the application
-- MongoDB Atlas for database hosting
+- NeonDB for database hosting
 - ShadCN UI for the beautiful UI components

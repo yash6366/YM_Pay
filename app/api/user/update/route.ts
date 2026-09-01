@@ -1,51 +1,42 @@
 import { NextResponse } from "next/server"
 import { cookies } from "next/headers"
-import { ObjectId } from "mongodb"
-import { getMongoClient, closeMongoClient, getCollection } from "@/app/config/database"
+import { ObjectId, getNeonClient, getCollection, COLLECTIONS } from "@/app/config/database"
 import { User } from "@/app/types"
-import { verifyToken, handleError, AppError } from "@/app/utils"
+import { verifyToken, handleError, AppError, AUTH_COOKIE_NAME } from "@/app/utils"
 
 export async function PUT(request: Request) {
-  let client = null
-
   try {
     const cookieStore = await cookies()
-    // Get token from cookies
-    const token = cookieStore.get("token")?.value
+    const token = cookieStore.get(AUTH_COOKIE_NAME)?.value || cookieStore.get("token")?.value
 
     if (!token) {
       throw new AppError("Unauthorized", 401)
     }
 
-    // Verify token
     const decoded = verifyToken(token)
     if (!decoded || !decoded.userId) {
       throw new AppError("Invalid token", 401)
     }
 
-    // Get update data from request body
     const { firstName, lastName, email, dob } = await request.json()
 
-    // Connect to MongoDB
-    client = await getMongoClient()
-    const usersCollection = getCollection<User>(client, "USERS")
-
-    // Basic validation (add more robust validation)
     if (!firstName || !lastName) {
-      return NextResponse.json({ message: 'First and Last name are required' }, { status: 400 })
+      return NextResponse.json({ message: "First and Last name are required" }, { status: 400 })
     }
 
-    // Update user
+    const client = await getNeonClient()
+    const usersCollection = getCollection<User>(client, COLLECTIONS.USERS)
+
     const result = await usersCollection.findOneAndUpdate(
       { _id: new ObjectId(decoded.userId) },
       {
         $set: {
-          firstName,
-          lastName,
-          email: email || null,
+          firstName: firstName.trim(),
+          lastName: lastName.trim(),
+          email: email?.trim() || null,
           dob: dob ? new Date(dob) : null,
-          updatedAt: new Date()
-        }
+          updatedAt: new Date(),
+        },
       },
       { returnDocument: "after", projection: { password: 0 } }
     )
@@ -54,13 +45,11 @@ export async function PUT(request: Request) {
       throw new AppError("User not found", 404)
     }
 
-    return NextResponse.json(result)
+    return NextResponse.json({
+      ...result,
+      balance: Number(result.balance ?? 0),
+    })
   } catch (error) {
     return handleError(error)
-  } finally {
-    if (client) {
-      await closeMongoClient()
-    }
   }
 }
-

@@ -3,9 +3,10 @@ import { z } from 'zod'
 // Phone number validation
 export const phoneSchema = z
   .string()
-  .min(10, 'Phone number must be at least 10 digits')
-  .max(15, 'Phone number must not exceed 15 digits')
-  .regex(/^\+?[0-9]+$/, 'Phone number must contain only digits')
+  .transform((value) => value.trim().replace(/[\s-]/g, ''))
+  .refine((value) => /^\+?[0-9]{10,15}$/.test(value), {
+    message: 'Phone number must be 10-15 digits with optional + prefix',
+  })
 
 // Password validation
 export const passwordSchema = z

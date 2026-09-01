@@ -150,7 +150,7 @@ export default function DashboardPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-gray-600">Available Balance</p>
-                  <p className="text-2xl font-bold">₹{userData?.balance.toFixed(2)}</p>
+                  <p className="text-2xl font-bold">₹{Number(userData?.balance ?? 0).toFixed(2)}</p>
                 </div>
                 <div className="h-12 w-12 rounded-full bg-sky-100 flex items-center justify-center">
                   <TrendingUp className="h-6 w-6 text-sky-600" />

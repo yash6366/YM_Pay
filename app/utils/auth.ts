@@ -1,38 +1,33 @@
-import { jwtVerify } from 'jose';
-import { cookies } from 'next/headers'
-import { AppError } from '@/lib/error'
+import { cookies } from "next/headers"
+import { AppError, AUTH_COOKIE_NAME, getAuthCookieOptions, getJwtSecret, verifyToken } from "@/app/utils"
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key'
-
-export async function verifyToken(token: string) {
-  try {
-    const { payload } = await jwtVerify(token, new TextEncoder().encode(JWT_SECRET))
-    return payload
-  } catch (error) {
-    throw new AppError('Invalid token', 401)
-  }
+export async function verifyAuthToken(token: string) {
+  return verifyToken(token)
 }
 
 export async function getCurrentUser() {
   const cookieStore = await cookies()
-  const token = cookieStore.get('token')?.value
+  const token = cookieStore.get(AUTH_COOKIE_NAME)?.value
+
   if (!token) {
-    throw new AppError('Unauthorized', 401)
+    throw new AppError("Unauthorized", 401)
   }
 
   try {
-    const payload = await verifyToken(token)
-    return payload
-  } catch (error) {
-    throw new AppError('Unauthorized', 401)
+    return verifyAuthToken(token)
+  } catch {
+    throw new AppError("Unauthorized", 401)
   }
 }
 
-export function generateToken(userId: string) {
-  const payload = {
-    userId,
-    exp: Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60, // 7 days
-  }
+export function generateAuthToken(userId: string) {
+  return require("jsonwebtoken").sign({ userId }, getJwtSecret(), { expiresIn: "7d" })
+}
 
-  return new TextEncoder().encode(JSON.stringify(payload))
+export function getAuthCookieName() {
+  return AUTH_COOKIE_NAME
+}
+
+export function getCookieOptions() {
+  return getAuthCookieOptions()
 } 

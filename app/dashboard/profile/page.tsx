@@ -208,7 +208,7 @@ export default function ProfilePage() {
           <Wallet className="h-6 w-6 text-blue-600 mr-3" />
           <div>
              <p className="text-sm text-blue-800">Wallet Balance</p>
-             <p className="text-xl font-semibold text-blue-900">₹{profile.balance?.toFixed(2) ?? '0.00'}</p>
+             <p className="text-xl font-semibold text-blue-900">₹{Number(profile?.balance ?? 0).toFixed(2)}</p>
           </div>
         </div>
       </div>

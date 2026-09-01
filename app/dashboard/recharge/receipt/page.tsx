@@ -32,6 +32,7 @@ export default function RechargeReceiptPage() {
       const parsedData = JSON.parse(decodeURIComponent(data))
       setReceipt({
         ...parsedData,
+        amount: Number(parsedData.amount ?? 0),
         timestamp: new Date().toLocaleString(),
         upiTransactionId: generateUpiTransactionId(),
         paymentId: generatePaymentId()

@@ -1,10 +1,9 @@
 'use server'
 
 import { cookies } from "next/headers"
-import { ObjectId } from "mongodb"
-import { getMongoClient, closeMongoClient, getCollection, TransactionType } from "@/app/config/database"
+import { ObjectId, getNeonClient, getCollection, TransactionType, COLLECTIONS } from "@/app/config/database"
 import { Transaction, User } from "@/app/types"
-import { verifyToken } from "@/app/utils"
+import { verifyToken, AUTH_COOKIE_NAME } from "@/app/utils"
 
 export interface DisplayTransaction {
   id: string
@@ -16,11 +15,9 @@ export interface DisplayTransaction {
 }
 
 export async function fetchTransactions(): Promise<DisplayTransaction[]> {
-  let client = null
-
   try {
     const cookieStore = await cookies()
-    const token = cookieStore.get("token")?.value
+    const token = cookieStore.get(AUTH_COOKIE_NAME)?.value || cookieStore.get("token")?.value
     if (!token) {
       throw new Error("Unauthorized")
     }
@@ -30,8 +27,8 @@ export async function fetchTransactions(): Promise<DisplayTransaction[]> {
       throw new Error("Invalid token")
     }
 
-    client = await getMongoClient()
-    const transactionsCollection = getCollection<Transaction>(client, "TRANSACTIONS")
+    const client = await getNeonClient()
+    const transactionsCollection = getCollection<Transaction>(client, COLLECTIONS.TRANSACTIONS)
 
     // Get transactions
     const transactions = await transactionsCollection
@@ -42,7 +39,7 @@ export async function fetchTransactions(): Promise<DisplayTransaction[]> {
       .toArray()
 
     // Get user details
-    const usersCollection = getCollection<User>(client, "USERS")
+    const usersCollection = getCollection<User>(client, COLLECTIONS.USERS)
     const userIds = new Set<string>()
     transactions.forEach((t) => {
       if (t.senderId !== "system") userIds.add(t.senderId)
@@ -67,12 +64,10 @@ export async function fetchTransactions(): Promise<DisplayTransaction[]> {
       if (t.type === TransactionType.ADD) {
         type = "added"
       } else if (t.receiverId === decoded.userId) {
-        // If current user is the receiver, it's a received transaction
         type = "received"
         const sender = userMap.get(t.senderId)
         otherParty = sender ? `${sender.firstName} ${sender.lastName}` : (t.senderId === "system" ? "System" : "Unknown")
       } else {
-        // If current user is the sender, it's a sent transaction
         type = "sent"
         const receiver = userMap.get(t.receiverId)
         otherParty = receiver ? `${receiver.firstName} ${receiver.lastName}` : (t.receiverId === "system" ? "System" : "Unknown")
@@ -80,19 +75,15 @@ export async function fetchTransactions(): Promise<DisplayTransaction[]> {
 
       return {
         id: t._id.toString(),
-        amount: t.amount,
+        amount: Number(t.amount ?? 0),
         type,
         otherParty,
         timestamp: t.timestamp.toISOString(),
-        description: t.description
+        description: t.description || ""
       }
     })
   } catch (error) {
     console.error("Failed to fetch transactions:", error)
     throw error
-  } finally {
-    if (client) {
-      await closeMongoClient()
-    }
   }
 }

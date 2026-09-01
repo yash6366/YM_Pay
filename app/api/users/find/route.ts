@@ -1,26 +1,22 @@
 import { NextResponse } from "next/server"
-import { getMongoClient, closeMongoClient, getCollection } from "@/app/config/database"
+import { getNeonClient, getCollection, COLLECTIONS } from "@/app/config/database"
 import { User } from "@/app/types"
 import { handleError, AppError } from "@/app/utils"
 
 export async function GET(request: Request) {
-  let client = null
-
   try {
     const { searchParams } = new URL(request.url)
     const phone = searchParams.get("phone")
 
     if (!phone) {
-      throw new AppError("Phone number is required")
+      throw new AppError("Phone number is required", 400)
     }
 
-    // Connect to MongoDB
-    client = await getMongoClient()
-    const usersCollection = getCollection<User>(client, "USERS")
+    const client = await getNeonClient()
+    const usersCollection = getCollection<User>(client, COLLECTIONS.USERS)
 
-    // Find user by phone
     const user = await usersCollection.findOne(
-      { phone },
+      { phone: phone.trim() },
       { projection: { _id: 1, firstName: 1, lastName: 1, phone: 1 } }
     )
 
@@ -31,10 +27,5 @@ export async function GET(request: Request) {
     return NextResponse.json(user)
   } catch (error) {
     return handleError(error)
-  } finally {
-    if (client) {
-      await closeMongoClient()
-    }
   }
 }
-

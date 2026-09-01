@@ -1,11 +1,16 @@
 export class AppError extends Error {
-  constructor(
-    message: string,
-    public statusCode: number = 400,
-    public code?: string
-  ) {
+  public statusCode: number
+  public code?: string
+
+  constructor(message: string, statusCode: number = 400, code?: string) {
     super(message)
     this.name = 'AppError'
+    this.statusCode = statusCode
+    this.code = code
+  }
+
+  get status() {
+    return this.statusCode
   }
 }
 
@@ -28,6 +33,21 @@ export function handleError(error: unknown) {
   }
 
   if (error instanceof Error) {
+    const message = error.message.toLowerCase()
+    if (message.includes('ecconnrefused') || message.includes('querysrv') || message.includes('neon')) {
+      return new Response(
+        JSON.stringify({
+          message: 'Database is temporarily unavailable. Please ensure your Neon database URL is valid and accessible.',
+        }),
+        {
+          status: 503,
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      )
+    }
+
     return new Response(
       JSON.stringify({
         message: 'Internal server error',

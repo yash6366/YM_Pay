@@ -16,7 +16,7 @@ export default function WalletPage() {
       try {
         const response = await fetch("/api/user");
         const data = await response.json();
-        setBalance(data.balance || 0);
+        setBalance(Number(data.balance ?? 0));
       } catch (error) {
         toast({
           variant: "destructive",
@@ -38,7 +38,7 @@ export default function WalletPage() {
         <CardContent>
           <div className="text-center mb-6">
             <p className="text-gray-600">Available Balance</p>
-            <p className="text-4xl font-bold">₹{balance.toFixed(2)}</p>
+            <p className="text-4xl font-bold">₹{Number(balance ?? 0).toFixed(2)}</p>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <Link href="/dashboard/add-money">

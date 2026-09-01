@@ -1,53 +1,43 @@
 import { NextResponse } from "next/server"
 import { cookies } from "next/headers"
-import { ObjectId } from "mongodb"
-import { getMongoClient, closeMongoClient, getCollection } from "@/app/config/database"
+import { ObjectId, getNeonClient, getCollection, COLLECTIONS } from "@/app/config/database"
 import { User } from "@/app/types"
-import { verifyToken } from "@/app/utils"
+import { verifyToken, AUTH_COOKIE_NAME } from "@/app/utils"
 
 export async function GET() {
-  let client = null
-
   try {
     const cookieStore = await cookies()
-    // Get token from cookies
-    const token = cookieStore.get("token")?.value
+    const token = cookieStore.get(AUTH_COOKIE_NAME)?.value || cookieStore.get("token")?.value
 
     if (!token) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 })
     }
 
-    // Verify token
     const decoded = verifyToken(token)
     if (!decoded || !decoded.userId) {
       return NextResponse.json({ message: "Invalid token" }, { status: 401 })
     }
 
-    // Connect to MongoDB
-    client = await getMongoClient()
-    const usersCollection = getCollection<User>(client, "USERS")
+    const client = await getNeonClient()
+    const usersCollection = getCollection<User>(client, COLLECTIONS.USERS)
 
-    // Find user using ObjectId
     const user = await usersCollection.findOne({ _id: new ObjectId(decoded.userId) })
 
     if (!user) {
       return NextResponse.json({ message: "User not found" }, { status: 404 })
     }
 
-    // Remove sensitive data
     const { password, ...userData } = user
 
-    return NextResponse.json(userData)
+    return NextResponse.json({
+      ...userData,
+      balance: Number(userData.balance ?? 0),
+    })
   } catch (error) {
     console.error("Auth error:", error)
     return NextResponse.json(
       { message: "Unauthorized", details: error instanceof Error ? error.message : "Unknown error" },
       { status: 401 }
     )
-  } finally {
-    if (client) {
-      await closeMongoClient()
-    }
   }
 }
-
