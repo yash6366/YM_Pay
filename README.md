@@ -124,7 +124,7 @@ EXECUTE FUNCTION prevent_transaction_mutation();
 ## Security & Sanitization
 
 * **Defense in Depth**: Authenticated user ID is derived strictly from JWT claims (`decoded.userId`), eliminating Insecure Direct Object Reference (IDOR) vulnerabilities.
-* **Sensitive Field Sanitization (SEC-01)**: User projections in transaction history and server actions explicitly select only safe fields (`id`, `firstName`, `lastName`, `phone`). Password hashes, salts, and secrets are never returned in responses.
+* **Sensitive Field Sanitization (SEC-01)**: User projections in transaction history and server actions explicitly select only safe fields (`SELECT "_id", "firstName", "lastName", phone`). Password hashes, salts, and secrets are never returned in responses.
 * **Cookie Transport**: JWT tokens are transported exclusively via `HttpOnly`, `SameSite=Lax`, and `Secure` (in production) cookies.
 * **Parameterized SQL**: All database operations use `$1, $2, ...` query parameters to prevent SQL injection.
 * **Observability & Request Correlation**: Middleware attaches an `X-Request-ID` UUID to every request/response for structured logging and distributed tracing.
@@ -166,11 +166,6 @@ npm run lint
 npm run build
 ```
 
-### Verified Test Scenarios:
-- **21 Unit Tests**: Password validation, phone validation, money normalization, JWT signing/verifying, cookie security, date helpers, idempotency matching/conflict logic, lock order sorting, and user projection sanitization.
-- **9 Live PostgreSQL Tests**: Non-negative balance constraint, positive amount constraint, ledger immutability trigger, ACID atomic transfer, rollback on error, concurrent overdraft protection, opposing transfer deadlock prevention, idempotency race protection, and wealth conservation invariant.
-
----
 
 ## Production Readiness Boundaries
 
@@ -197,16 +192,6 @@ Detailed engineering specifications and design records:
 * [Security & Threat Model](file:///d:/Projects/YM_Pay/docs/SECURITY.md)
 * [Testing Architecture](file:///d:/Projects/YM_Pay/docs/TESTING.md)
 * [Production Readiness Analysis](file:///d:/Projects/YM_Pay/docs/PRODUCTION_READINESS.md)
-* [ADR-001: PostgreSQL as Financial Database](file:///d:/Projects/YM_Pay/docs/adr/ADR-001-postgresql-financial-database.md)
-* [ADR-002: ACID Transaction Boundaries](file:///d:/Projects/YM_Pay/docs/adr/ADR-002-acid-transaction-boundaries.md)
-* [ADR-003: Database Financial Invariants](file:///d:/Projects/YM_Pay/docs/adr/ADR-003-database-financial-invariants.md)
-* [ADR-004: Idempotency Strategy](file:///d:/Projects/YM_Pay/docs/adr/ADR-004-idempotency.md)
-* [ADR-005: Deterministic Lock Ordering](file:///d:/Projects/YM_Pay/docs/adr/ADR-005-deterministic-lock-ordering.md)
-* [ADR-006: Append-Only Immutable Ledger](file:///d:/Projects/YM_Pay/docs/adr/ADR-006-immutable-ledger.md)
-* [ADR-007: Monetary Precision Strategy](file:///d:/Projects/YM_Pay/docs/adr/ADR-007-monetary-precision.md)
-* [ADR-008: Authentication Architecture](file:///d:/Projects/YM_Pay/docs/adr/ADR-008-authentication.md)
-
----
 
 ## Local Development & Setup
 

@@ -10,9 +10,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint app components lib hooks tests",
-    "typecheck": "tsc --noEmit",
-    "test": "node --experimental-strip-types --test tests/auth-config.test.ts tests/financial-transactions.test.ts",
-    "test:integration": "node --experimental-strip-types --test tests/financial-transactions.integration.test.ts"
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.3.4",
