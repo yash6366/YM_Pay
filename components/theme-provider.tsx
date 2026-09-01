@@ -3,11 +3,14 @@
 import * as React from 'react'
 import {
   ThemeProvider as NextThemesProvider,
+  type ThemeProviderProps as NextThemeProviderProps,
 } from 'next-themes'
 
-interface ThemeProviderProps {
+type ThemeAttribute = 'class' | `data-${string}`
+
+type ThemeProviderProps = Omit<NextThemeProviderProps, 'attribute'> & {
   children: React.ReactNode
-  attribute?: string
+  attribute?: ThemeAttribute | ThemeAttribute[]
   defaultTheme?: string
   enableSystem?: boolean
   disableTransitionOnChange?: boolean
