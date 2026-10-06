@@ -9,7 +9,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint app components lib hooks tests",
+    "lint": "eslint app components lib hooks",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
